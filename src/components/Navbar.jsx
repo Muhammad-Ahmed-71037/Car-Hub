@@ -72,6 +72,11 @@ const Navbar = () => {
       icon: <InfoCircleOutlined />,
       label: <span onClick={() => handleNav("/about")}>About</span>,
     },
+    {
+      key: "cars",
+      icon: <CarOutlined />,
+      label: <span onClick={() => handleNav("/cars")}>Cars</span>, // 👈 New Public Cars Section
+    }
   ];
 
   if (user) {

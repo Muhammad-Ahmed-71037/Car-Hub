@@ -1,67 +1,103 @@
 import { useEffect, useState } from "react";
-import { Card, Row, Col, Spin, Modal, Tag, Space, Button } from "antd";
-import { EditOutlined, EyeOutlined, DeleteOutlined, HeartOutlined, HeartFilled } from "@ant-design/icons";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  Layout, Menu, Card, Button, Row, Col, Spin, Modal,
+  Typography, Divider, Statistic, Avatar, Badge, Dropdown
+} from "antd";
+import {
+  DashboardOutlined, ShoppingCartOutlined, CarOutlined,
+  AlertOutlined, CalendarOutlined, PlusOutlined,
+  EyeOutlined, EditOutlined, DeleteOutlined,
+  BellOutlined, UserOutlined, LogoutOutlined,
+  MenuUnfoldOutlined, MenuFoldOutlined
+} from "@ant-design/icons";
 import { supabase } from "../supabase/supabase";
 import { db } from "../firebase/firebase";
-import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/firestore";
+import {
+  collection, query, where, getDocs,
+  deleteDoc, doc, onSnapshot,
+  orderBy, limit
+} from "firebase/firestore";
 import { useSelector } from "react-redux";
+import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import "../styles/Dashboard.css";
 
+const { Header, Sider, Content } = Layout;
+const { Title, Text } = Typography;
+
 export default function Dashboard() {
-  const { uid } = useSelector((state) => state.auth.user || {});
+  const { user } = useSelector((state) => state.auth);
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewModal, setViewModal] = useState({ visible: false, car: null });
-  const [favorites, setFavorites] = useState(new Set());
+  const [collapsed, setCollapsed] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCars = async () => {
-      if (!uid) return;
-
       try {
-        const q = query(collection(db, "cars"), where("uid", "==", uid));
-        const querySnapshot = await getDocs(q);
+        const q = query(collection(db, "cars"), where("uid", "==", user?.uid));
 
-        const carsData = await Promise.all(
-          querySnapshot.docs.map(async (docSnap) => {
-            const data = docSnap.data();
+        // Real-time listener for cars
+        const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+          const carsData = await Promise.all(
+            querySnapshot.docs.map(async (docSnap) => {
+              const data = docSnap.data();
 
-            // Generate signed URL for private Supabase bucket
-            const { data: signedData, error } = await supabase
-              .storage
-              .from("car-images")
-              .createSignedUrl(data.filePath, 3600);
+              const { data: signedData } = await supabase
+                .storage
+                .from("car-images")
+                .createSignedUrl(data.filePath, 60 * 60);
 
-            if (error) {
-              console.error("Error generating signed URL:", error);
-              return null;
-            }
+              return {
+                id: docSnap.id,
+                ...data,
+                imageUrl: signedData?.signedUrl || ""
+              };
+            })
+          );
 
-            return {
-              id: docSnap.id,
-              ...data,
-              imageUrl: signedData.signedUrl
-            };
-          })
-        );
+          setCars(carsData);
+          setLoading(false);
+        });
 
-        setCars(carsData.filter(Boolean));
+        return () => unsubscribe();
       } catch (error) {
         console.error("Error fetching cars:", error);
-      } finally {
         setLoading(false);
       }
     };
 
+    const fetchNotifications = async () => {
+      if (!user?.uid) return;
+
+      try {
+        const q = query(
+          collection(db, "notifications"),
+          where("userId", "==", user.uid),
+          orderBy("createdAt", "desc"),
+          limit(5)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+          setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+
+        return () => unsubscribe();
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+      }
+    };
+
     fetchCars();
-  }, [uid]);
+    fetchNotifications();
+  }, [user?.uid]);
 
   const handleDelete = async (carId, filePath) => {
     Swal.fire({
       title: "Are you sure?",
-      text: "This will delete your car listing and its image.",
+      text: "This will permanently delete your car listing.",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -70,25 +106,16 @@ export default function Dashboard() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          // 1. Delete from Supabase Storage
           const { error: storageError } = await supabase
             .storage
             .from("car-images")
-            .remove([filePath]); // Must be exact path, e.g., `${uid}/filename.jpg`
+            .remove([filePath]);
 
-          if (storageError) {
-            console.error("Error deleting from Supabase:", storageError);
-          }
+          if (storageError) throw storageError;
 
-          console.log([filePath]);
-          
-          // 2. Delete from Firestore
           await deleteDoc(doc(db, "cars", carId));
 
-          // 3. Update state
-          setCars((prev) => prev.filter((car) => car.id !== carId));
-
-          Swal.fire("Deleted!", "Your car listing has been deleted.", "success");
+          Swal.fire("Deleted!", "Your car listing has been removed.", "success");
         } catch (error) {
           console.error(error);
           Swal.fire("Error!", "Failed to delete the listing.", "error");
@@ -97,186 +124,298 @@ export default function Dashboard() {
     });
   };
 
-
-  const toggleFavorite = (carId) => {
-    setFavorites(prev => {
-      const newFavorites = new Set(prev);
-      if (newFavorites.has(carId)) {
-        newFavorites.delete(carId);
-      } else {
-        newFavorites.add(carId);
+  const handleLogout = async () => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "You will be logged out",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Logout",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        auth.signOut();
+        dispatch(logoutUser());
+        navigate("/");
+        Swal.fire("Logged Out", "You have been logged out.", "success");
       }
-      return newFavorites;
     });
   };
 
   if (loading) {
     return (
-      <motion.div
-        className="dashboard-loading"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
-        <Spin size="large" />
-      </motion.div>
+      <div className="dashboard-loading">
+        <Spin size="large" tip="Loading your listings..." />
+      </div>
     );
   }
 
   return (
-    <motion.div
-      className="dashboard-container"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      <div className="dashboard-header">
-        <h1 className="dashboard-title">My Car Listings</h1>
-        <div className="stats">
-          <Tag color="blue">Total: {cars.length}</Tag>
-          <Tag color="green">Favorites: {favorites.size}</Tag>
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {cars.length > 0 ? (
-          <Row gutter={[24, 24]}>
-            {cars.map((car) => (
-              <Col xs={24} sm={12} md={8} lg={6} key={car.id}>
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.5 }}
-                  transition={{ duration: 0.3 }}
-                  whileHover={{ scale: 1.03 }}
-                >
-                  <Card
-                    hoverable
-                    cover={
-                      <div className="car-image-container">
-                        <img
-                          alt={car.title}
-                          src={car.imageUrl}
-                          className="car-image"
-                        />
-                        <button
-                          className="favorite-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFavorite(car.id);
-                          }}
-                        >
-                          {favorites.has(car.id) ? (
-                            <HeartFilled style={{ color: '#ff4d4f' }} />
-                          ) : (
-                            <HeartOutlined />
-                          )}
-                        </button>
-                      </div>
-                    }
-                    actions={[
-                      <EyeOutlined
-                        key="view"
-                        onClick={() => setViewModal({ visible: true, car })}
-                      />,
-                      <EditOutlined
-                        key="edit"
-                        onClick={() => console.log("Edit", car.id)}
-                      />,
-                      <DeleteOutlined
-                        key="delete"
-                        onClick={() => handleDelete(car.id)}
-                      />
-                    ]}
-                  >
-                    <Card.Meta
-                      title={car.title}
-                      description={
-                        <>
-                          <Space direction="vertical" size="small">
-                            <Tag color="gold">PKR: {car.price}</Tag>
-                            <Tag color="geekblue">{car.city}</Tag>
-                            <Tag color="volcano">{car.transmission}</Tag>
-                          </Space>
-                        </>
-                      }
-                    />
-                  </Card>
-                </motion.div>
-              </Col>
-            ))}
-          </Row>
-        ) : (
-          <motion.div
-            className="no-data-container"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            <div className="no-data-content">
-              <h2>No car listings found</h2>
-              <p>Start by adding your first car listing</p>
-              <Button type="primary">Add New Car</Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* View Modal */}
-      <Modal
-        title={viewModal.car?.title}
-        open={viewModal.visible}
-        footer={null}
-        onCancel={() => setViewModal({ visible: false, car: null })}
-        width={800}
+    <Layout style={{ minHeight: '100vh' }}>
+      <Sider
+        collapsible
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
+        width={250}
+        theme="light"
+        breakpoint="lg"
       >
-        {viewModal.car && (
-          <div className="car-details-modal">
-            <motion.img
-              src={viewModal.car.imageUrl}
-              alt={viewModal.car.title}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            />
-            <div className="details-grid">
-              <div className="detail-item">
-                <span className="detail-label">Price:</span>
-                <span className="detail-value">PKR{viewModal.car.price}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Transmission:</span>
-                <span className="detail-value">{viewModal.car.transmission}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Condition:</span>
-                <span className="detail-value">{viewModal.car.condition}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Engine:</span>
-                <span className="detail-value">{viewModal.car.engineCapacity} cc</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Color:</span>
-                <span className="detail-value">{viewModal.car.color}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">City:</span>
-                <span className="detail-value">{viewModal.car.city}</span>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <Button
-                type="primary"
-                onClick={() => console.log("Contact seller")}
-              >
-                Contact Seller
+        <div className="logo" style={{ padding: collapsed ? '16px 8px' : '16px 24px' }}>
+          {collapsed ? (
+            <Avatar size="large" icon={<CarOutlined />} />
+          ) : (
+            <Title level={4} style={{ margin: 0, color: '#1890ff' }}>
+              <CarOutlined /> CarWay
+            </Title>
+          )}
+        </div>
+
+        <Menu theme="light" mode="inline" defaultSelectedKeys={['dashboard']}>
+          <Menu.Item key="dashboard" icon={<DashboardOutlined />}>
+            Dashboard
+          </Menu.Item>
+          <Menu.Item key="sell" icon={<PlusOutlined />}>
+            <Link to="/sell">Sell Your Car</Link>
+          </Menu.Item>
+          <Menu.Item key="listings" icon={<ShoppingCartOutlined />}>
+            My Listings
+          </Menu.Item>
+          <Menu.Item key="reports" icon={<AlertOutlined />}>
+            Reports
+          </Menu.Item>
+          <Menu.Item key="calendar" icon={<CalendarOutlined />}>
+            Calendar
+          </Menu.Item>
+        </Menu>
+
+        {!collapsed && (
+          <div style={{ padding: '16px', marginTop: 'auto' }}>
+            <Divider style={{ margin: '16px 0' }} />
+            <Title level={5} style={{ marginBottom: 8 }}>Enterprise Team</Title>
+            <Text type="secondary" style={{ marginBottom: 16 }}>
+              A new way to buy and sell cars.
+            </Text>
+            <Link to="/sell">
+              <Button type="primary" icon={<PlusOutlined />} block>
+                Sell your Car
               </Button>
-            </div>
+            </Link>
           </div>
         )}
-      </Modal>
-    </motion.div>
+      </Sider>
+
+      <Layout>
+        <Header style={{
+          padding: 0,
+          background: '#fff',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          boxShadow: '0 1px 4px rgba(0, 21, 41, 0.08)'
+        }}>
+          <Button
+            type="text"
+            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            onClick={() => setCollapsed(!collapsed)}
+            style={{ width: 64, height: 64 }}
+          />
+
+          <div style={{ paddingRight: 24, display: 'flex', alignItems: 'center', gap: 16 }}>
+            <Dropdown
+              overlay={
+                <Menu>
+                  <Menu.Item key="profile" icon={<UserOutlined />}>
+                    My Profile
+                  </Menu.Item>
+                  <Menu.Item key="logout" icon={<LogoutOutlined />} onClick={handleLogout}>
+                    Logout
+                  </Menu.Item>
+                </Menu>
+              }
+              placement="bottomRight"
+            >
+              <Badge count={notifications.length} size="small">
+                <Avatar
+                  src={user?.photoURL}
+                  icon={<UserOutlined />}
+                  style={{ cursor: 'pointer' }}
+                />
+              </Badge>
+            </Dropdown>
+          </div>
+        </Header>
+
+        <Content style={{ margin: '24px 16px 0' }}>
+          <div style={{
+            padding: 24,
+            minHeight: 'calc(100vh - 112px)',
+            background: '#fff',
+            borderRadius: 8
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 24
+            }}>
+              <Title level={3} style={{ margin: 0 }}>My Car Listings</Title>
+              <Link to="/sell">
+                <Button type="primary" icon={<PlusOutlined />}>
+                  Add New Car
+                </Button>
+              </Link>
+            </div>
+
+            {cars.length === 0 ? (
+              <Card style={{ textAlign: 'center', padding: '40px 0' }}>
+                <div style={{
+                  width: 200,
+                  height: 200,
+                  margin: '0 auto 24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#f5f5f5',
+                  borderRadius: '50%'
+                }}>
+                  <CarOutlined style={{ fontSize: 80, color: '#1890ff' }} />
+                </div>
+                <Title level={4}>No cars listed yet</Title>
+                <Text type="secondary" style={{ marginBottom: 24 }}>
+                  You haven't listed any cars for sale yet
+                </Text>
+                <Link to="/sell">
+                  <Button type="primary" size="large" icon={<PlusOutlined />}>
+                    Sell Your First Car
+                  </Button>
+                </Link>
+              </Card>
+            ) : (
+              <Row gutter={[16, 16]}>
+                {cars.map((car) => (
+                  <Col key={car.id} xs={24} sm={12} md={8} lg={6}>
+                    <Card
+                      hoverable
+                      cover={
+                        <div style={{ height: 160, overflow: 'hidden' }}>
+                          <img
+                            alt={car.title}
+                            src={car.imageUrl}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                          />
+                        </div>
+                      }
+                      actions={[
+                        <EyeOutlined
+                          key="view"
+                          onClick={() => setViewModal({ visible: true, car })}
+                        />,
+                        <EditOutlined
+                          key="edit"
+                          onClick={() => navigate(`/edit-car/${car.id}`)}
+                        />,
+                        <DeleteOutlined
+                          key="delete"
+                          onClick={() => handleDelete(car.id, car.filePath)}
+                        />
+                      ]}
+                    >
+                      <Card.Meta
+                        title={car.title}
+                        description={
+                          <div style={{ marginTop: 8 }}>
+                            <Statistic
+                              title="Price"
+                              value={car.price}
+                              prefix="PKR"
+                              valueStyle={{ fontSize: 18 }}
+                            />
+                            <Text type="secondary">{car.city}</Text>
+                          </div>
+                        }
+                      />
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            )}
+
+            <Modal
+              title={viewModal.car?.title}
+              open={viewModal.visible}
+              onCancel={() => setViewModal({ visible: false, car: null })}
+              footer={[
+                <Button
+                  key="edit"
+                  type="primary"
+                  onClick={() => {
+                    setViewModal({ visible: false, car: null });
+                    navigate(`/edit-car/${viewModal.car?.id}`);
+                  }}
+                >
+                  Edit Listing
+                </Button>,
+                <Button
+                  key="close"
+                  onClick={() => setViewModal({ visible: false, car: null })}
+                >
+                  Close
+                </Button>
+              ]}
+              width={800}
+            >
+              {viewModal.car && (
+                <div style={{ marginTop: 16 }}>
+                  <div style={{
+                    height: 300,
+                    marginBottom: 24,
+                    borderRadius: 8,
+                    overflow: 'hidden'
+                  }}>
+                    <img
+                      src={viewModal.car.imageUrl}
+                      alt={viewModal.car.title}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                    />
+                  </div>
+
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Statistic title="Price" value={viewModal.car.price} prefix="PKR" />
+                    </Col>
+                    <Col span={12}>
+                      <Statistic title="Location" value={viewModal.car.city} />
+                    </Col>
+                    <Col span={12}>
+                      <Statistic title="Transmission" value={viewModal.car.transmission} />
+                    </Col>
+                    <Col span={12}>
+                      <Statistic title="Condition" value={viewModal.car.condition} />
+                    </Col>
+                    <Col span={12}>
+                      <Statistic title="Engine" value={viewModal.car.engineCapacity} suffix="cc" />
+                    </Col>
+                    <Col span={12}>
+                      <Statistic title="Color" value={viewModal.car.color} />
+                    </Col>
+                    <Col span={24}>
+                      <Divider orientation="left">Description</Divider>
+                      <Text>{viewModal.car.description || 'No description provided'}</Text>
+                    </Col>
+                  </Row>
+                </div>
+              )}
+            </Modal>
+          </div>
+        </Content>
+      </Layout>
+    </Layout>
   );
 }

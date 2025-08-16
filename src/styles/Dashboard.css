@@ -1,168 +1,159 @@
-.dashboard-container {
-  padding: 2rem;
-  background-color: #f8f9fa;
-  min-height: 100vh;
-}
-
-.dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.dashboard-title {
-  font-size: 2.5rem;
-  font-weight: 700;
+/* Base Styles */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
-  color: #1a1a1a;
-  background: linear-gradient(90deg, #1890ff, #722ed1);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  padding: 0;
+  color: #333;
+  background-color: #f0f2f5;
 }
 
-.stats {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.car-image-container {
-  position: relative;
-  height: 220px;
-  overflow: hidden;
-}
-
-.car-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.car-image-container:hover .car-image {
-  transform: scale(1.05);
-}
-
-.favorite-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(255, 255, 255, 0.8);
-  border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
+/* Layout Styles */
+.logo {
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  font-size: 18px;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 0 16px;
+}
+
+.site-header {
+  background: #fff;
+  padding: 0 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
   z-index: 1;
 }
 
-.favorite-btn:hover {
-  background: rgba(255, 255, 255, 0.9);
-  transform: scale(1.1);
-}
-
-.ant-card {
-  border-radius: 12px !important;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  transition: box-shadow 0.3s ease;
-}
-
-.ant-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-}
-
-.ant-card-actions {
-  background: #fafafa !important;
-}
-
-.ant-card-actions > li {
-  margin: 8px 0 !important;
-}
-
-.no-data-container {
+.header-left {
   display: flex;
-  justify-content: center;
   align-items: center;
-  min-height: 60vh;
 }
 
-.no-data-content {
-  text-align: center;
-  max-width: 500px;
-  padding: 2rem;
+.site-content {
+  margin: 24px;
+  min-height: calc(100vh - 112px);
 }
 
-.no-data-content h2 {
-  font-size: 1.8rem;
-  color: #1a1a1a;
-  margin-bottom: 0.5rem;
+/* Component Styles */
+.enterprise-team {
+  padding: 16px;
+  border-top: 1px solid #f0f0f0;
+  margin-top: 16px;
 }
 
-.no-data-content p {
-  font-size: 1.1rem;
-  color: #666;
-  margin-bottom: 1.5rem;
-}
-
-.car-details-modal img {
-  width: 100%;
-  height: 400px;
-  object-fit: cover;
+.stat-card {
   border-radius: 8px;
-  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: none;
 }
 
-.details-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+.stat-card .ant-statistic-title {
+  color: #666;
+  font-size: 14px;
 }
 
-.detail-item {
+.chart-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: none;
+}
+
+.auctions-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: none;
+}
+
+.notifications-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: none;
+  height: 100%;
+}
+
+.vehicle-info {
   display: flex;
-  justify-content: space-between;
-  padding: 0.75rem;
-  background: #f5f5f5;
-  border-radius: 6px;
-}
-
-.detail-label {
-  font-weight: 600;
-  color: #444;
-}
-
-.detail-value {
-  font-weight: 500;
-  color: #222;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 1rem;
-}
-
-.dashboard-loading {
-  display: flex;
-  justify-content: center;
   align-items: center;
-  height: 100vh;
 }
 
+.vehicle-details {
+  margin-left: 16px;
+}
+
+.vehicle-details h4 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.vehicle-details p {
+  margin: 4px 0 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.active-row {
+  background-color: #f6ffed;
+}
+
+/* Bid Card Styles */
+.bid-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: none;
+}
+
+.bid-vehicle {
+  display: flex;
+  margin-bottom: 24px;
+}
+
+.bid-details {
+  margin-left: 24px;
+}
+
+.vehicle-specs .ant-tag {
+  margin-bottom: 8px;
+}
+
+.regions-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Animations */
+.ant-table-row {
+  transition: all 0.3s;
+}
+
+.ant-table-row:hover {
+  background-color: #f5f5f5 !important;
+}
+
+/* Responsive Styles */
 @media (max-width: 768px) {
-  .dashboard-title {
-    font-size: 2rem;
+  .bid-vehicle {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
   }
   
-  .details-grid {
-    grid-template-columns: 1fr;
+  .bid-details {
+    margin-left: 0;
+    margin-top: 16px;
+  }
+  
+  .site-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+  }
+  
+  .header-left {
+    margin-bottom: 16px;
   }
 }

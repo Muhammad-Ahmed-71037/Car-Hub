@@ -5,9 +5,11 @@ import SignUp from "./pages/SignUp";
 import SignIn from "./pages/SignIn";
 import Sell from "./pages/Sell";
 import Dashboard from "./pages/Dashboard";
+import EditCar from "./pages/EditCar";
 import NotFound from "./pages/NotFound";
 import Navbar from"./components/Navbar.jsx";
 import About from "./pages/About";
+import Cars from "./pages/Cars.jsx";
 
 function App() {
   return (
@@ -18,6 +20,7 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/signin" element={<SignIn />} />
+        <Route path="/cars" element={<Cars />} />
         <Route
           path="/sell"
           element={
@@ -31,6 +34,14 @@ function App() {
           element={
             <PrivateRoute>
               <Dashboard />
+            </PrivateRoute>
+          }
+        />
+          <Route
+          path="/edit-car/:id" 
+          element={
+            <PrivateRoute>
+              <EditCar />
             </PrivateRoute>
           }
         />
