@@ -75,7 +75,7 @@ const Navbar = () => {
     {
       key: "cars",
       icon: <CarOutlined />,
-      label: <span onClick={() => handleNav("/cars")}>Cars</span>, // 👈 New Public Cars Section
+      label: <span onClick={() => handleNav("/cars")}>Cars</span>, 
     }
   ];
 

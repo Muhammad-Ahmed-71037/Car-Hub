@@ -1,22 +1,9 @@
 import { useEffect, useState } from "react";
-import {
-  Layout, Menu, Card, Button, Row, Col, Spin, Modal,
-  Typography, Divider, Statistic, Avatar, Badge, Dropdown
-} from "antd";
-import {
-  DashboardOutlined, ShoppingCartOutlined, CarOutlined,
-  AlertOutlined, CalendarOutlined, PlusOutlined,
-  EyeOutlined, EditOutlined, DeleteOutlined,
-  BellOutlined, UserOutlined, LogoutOutlined,
-  MenuUnfoldOutlined, MenuFoldOutlined
-} from "@ant-design/icons";
+import {Layout, Menu, Card, Button, Row, Col, Spin, Modal,Typography, Divider, Statistic, Avatar, Badge, Dropdown} from "antd";
+import {DashboardOutlined, ShoppingCartOutlined, CarOutlined,AlertOutlined, CalendarOutlined, PlusOutlined,EyeOutlined, EditOutlined, DeleteOutlined,BellOutlined, UserOutlined, LogoutOutlined,MenuUnfoldOutlined, MenuFoldOutlined} from "@ant-design/icons";
 import { supabase } from "../supabase/supabase";
 import { db } from "../firebase/firebase";
-import {
-  collection, query, where, getDocs,
-  deleteDoc, doc, onSnapshot,
-  orderBy, limit
-} from "firebase/firestore";
+import {collection, query, where, deleteDoc, doc, onSnapshot,orderBy, limit} from "firebase/firestore";
 import { useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
@@ -39,7 +26,6 @@ export default function Dashboard() {
       try {
         const q = query(collection(db, "cars"), where("uid", "==", user?.uid));
 
-        // Real-time listener for cars
         const unsubscribe = onSnapshot(q, async (querySnapshot) => {
           const carsData = await Promise.all(
             querySnapshot.docs.map(async (docSnap) => {

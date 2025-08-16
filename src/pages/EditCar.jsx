@@ -9,7 +9,6 @@ import { UploadOutlined } from "@ant-design/icons";
 import Swal from "sweetalert2";
 import "../styles/Sell.css";
 
-const { Option } = Select;
 
 export default function EditCar() {
   const { id } = useParams();
@@ -48,7 +47,6 @@ export default function EditCar() {
     tap: { scale: 0.98 }
   };
 
-  // Fetch car data on mount
   useEffect(() => {
     const fetchCar = async () => {
       try {
@@ -81,7 +79,6 @@ export default function EditCar() {
     fetchCar();
   }, [id, form, navigate]);
 
-  // File upload change
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     setFile(file);
@@ -94,13 +91,11 @@ export default function EditCar() {
     }
   };
 
-  // Submit handler
   const onFinish = async (values) => {
     setLoading(true);
     try {
       let filePath = existingFilePath;
 
-      // If new image is uploaded, replace old one
       if (file) {
         const fileExt = file.name.split(".").pop();
         const safeTitle = values.title.replace(/[^a-zA-Z0-9]/g, "_");
@@ -113,13 +108,11 @@ export default function EditCar() {
 
         if (uploadError) throw uploadError;
 
-        // delete old image if different
         if (existingFilePath && existingFilePath !== filePath) {
           await supabase.storage.from("car-images").remove([existingFilePath]);
         }
       }
 
-      // Update Firestore
       const docRef = doc(db, "cars", id);
       await updateDoc(docRef, { ...values, filePath });
 

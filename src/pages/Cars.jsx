@@ -12,9 +12,8 @@ export default function Cars() {
   const [contactNumber, setContactNumber] = useState("");
   const [negotiationLoading, setNegotiationLoading] = useState(false);
 
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(8); // cars per page
+  const [pageSize] = useState(8); 
 
   const [form] = Form.useForm();
 
@@ -52,7 +51,6 @@ export default function Cars() {
     fetchCars();
   }, []);
 
-  // Pagination logic
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const paginatedCars = cars.slice(startIndex, endIndex);
