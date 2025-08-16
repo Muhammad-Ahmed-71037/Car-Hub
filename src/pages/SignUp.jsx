@@ -7,17 +7,10 @@ import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { setUser } from "../redux/authSlice";
-import {
-  isValidEmail,
-  isValidPhone,
-  isValidName,
-  isValidCity,
-  isValidCNIC,
-} from "../utils/validation";
 import { motion } from "framer-motion";
 import "../styles/signup.css";
+import {PAKISTAN_CNIC_PATTERN, PASSWORD_PATTERN} from "../regex/regex.js"
 
-const { Title } = Typography;
 
 const SignUp = () => {
   const [form] = Form.useForm();
@@ -168,7 +161,16 @@ const SignUp = () => {
                 />
               </Form.Item>
 
-              <Form.Item label="CNIC" name="cnic" required>
+              <Form.Item label="CNIC" name="cnic" rules={[
+                {
+                  required: true,
+                  message: "CNIC is required",
+                },
+                {
+                  pattern: PAKISTAN_CNIC_PATTERN,
+                  message: "Please enter valid cnic",
+                },
+              ]}>
                 <Input 
                   className="modern-input" 
                   prefix={<span className="input-icon">🆔</span>}
@@ -176,7 +178,17 @@ const SignUp = () => {
                 />
               </Form.Item>
 
-              <Form.Item label="Password" name="password" required>
+              <Form.Item label="Password" name="password" rules={[
+                {
+                  required: true,
+                  message: "Password is required",
+                },
+                {
+                  pattern: PASSWORD_PATTERN,
+                  message:
+                    "Password must be 8+ chars, include uppercase, lowercase, number & special char.",
+                },
+              ]}>
                 <Input.Password 
                   className="modern-input" 
                   prefix={<span className="input-icon">🔒</span>}
