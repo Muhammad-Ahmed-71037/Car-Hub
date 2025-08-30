@@ -339,7 +339,10 @@ export default function Cars() {
                   <div className="owner-avatar">
                     <Avatar size={64} icon={<UserOutlined />} src={owner?.photoURL} />
                     <div className="owner-info">
-                      <div className="owner-name">{owner?.fullName || "Not available"}</div>
+                      <div className="owner-name"
+                      style={{color:"#000"}}
+                      >
+                        {owner?.fullName || "Not available"}</div>
                       <div className="owner-verification">Verified Seller</div>
                     </div>
                   </div>
@@ -348,14 +351,14 @@ export default function Cars() {
                     {owner?.phone && (
                       <div className="contact-item">
                         <PhoneOutlined />
-                        <span>{owner.phone}</span>
+                        <span style={{color:"#000"}}>{owner.phone}</span>
                       </div>
                     )}
                     
                     {owner?.email && (
                       <div className="contact-item">
                         <MailOutlined />
-                        <span>{owner.email}</span>
+                        <span style={{color:"#000"}}>{owner.email}</span>
                       </div>
                     )}
                     
