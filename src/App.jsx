@@ -10,6 +10,7 @@ import NotFound from "./pages/NotFound";
 import Navbar from"./components/Navbar.jsx";
 import About from "./pages/About";
 import Cars from "./pages/Cars.jsx";
+import Footer from "./components/Footer.jsx";
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <Footer/>
     </Router>
   );
 }

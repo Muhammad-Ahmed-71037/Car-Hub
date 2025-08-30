@@ -205,7 +205,7 @@ export default function Dashboard() {
             ) : (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <Title level={4} style={{ margin: 0, color: '#1890ff' }}>
-                  <CarOutlined /> CarWay
+                  <CarOutlined /> Car Hub
                 </Title>
               </motion.div>
             )}
@@ -307,7 +307,7 @@ export default function Dashboard() {
           >
             <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Title level={4} style={{ margin: 0, color: '#1890ff', display: 'flex', alignItems: 'center' }}>
-                <CarOutlined style={{ marginRight: '8px' }} /> CarWay
+                <CarOutlined style={{ marginRight: '8px' }} /> Car Hub
               </Title>
               <Button 
                 type="text" 
