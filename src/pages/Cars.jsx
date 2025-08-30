@@ -1,21 +1,55 @@
 import { useEffect, useState } from "react";
-import { Card, Row, Col, Spin, Modal, Pagination, Button, Input, Form, Divider } from "antd";
-import { EyeOutlined, PhoneOutlined } from "@ant-design/icons";
+import {
+  Card,
+  Row,
+  Col,
+  Spin,
+  Modal,
+  Pagination,
+  Divider,
+  message,
+  Tag,
+  Rate,
+  Button,
+  Empty,
+  Avatar,
+  Skeleton,
+  Progress
+} from "antd";
+import {
+  EyeOutlined,
+  UserOutlined,
+  PhoneOutlined,
+  MailOutlined,
+  CarOutlined,
+  EnvironmentOutlined,
+  DollarOutlined,
+  CalendarOutlined,
+  DashboardOutlined,
+  SafetyCertificateOutlined
+} from "@ant-design/icons";
 import { supabase } from "../supabase/supabase";
 import { db } from "../firebase/firebase";
-import { collection, getDocs, addDoc, orderBy, query } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  orderBy,
+  query,
+  doc,
+  getDoc,
+} from "firebase/firestore";
+import "../styles/Cars.css";
 
 export default function Cars() {
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewModal, setViewModal] = useState({ visible: false, car: null });
-  const [contactNumber, setContactNumber] = useState("");
-  const [negotiationLoading, setNegotiationLoading] = useState(false);
+
+  const [owner, setOwner] = useState(null);
+  const [ownerLoading, setOwnerLoading] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(8); 
-
-  const [form] = Form.useForm();
+  const pageSize = 8;
 
   useEffect(() => {
     const fetchCars = async () => {
@@ -24,25 +58,25 @@ export default function Cars() {
         const snapshot = await getDocs(q);
 
         const carsData = await Promise.all(
-          snapshot.docs.map(async (docSnap) => {
-            const car = docSnap.data();
+          snapshot.docs.map(async (d) => {
+            const car = d.data();
 
             let imageUrl = "";
             if (car.filePath) {
-              const { data: signedData, error } = await supabase
-                .storage
-                .from("car-images")
+              const { data, error } = await supabase.storage
+                .from("car-images") 
                 .createSignedUrl(car.filePath, 3600);
-              if (!error) imageUrl = signedData.signedUrl;
+              if (!error && data?.signedUrl) imageUrl = data.signedUrl;
             }
 
-            return { id: docSnap.id, ...car, imageUrl };
+            return { id: d.id, ...car, imageUrl };
           })
         );
 
         setCars(carsData);
       } catch (err) {
         console.error("Error fetching cars:", err);
+        message.error("Failed to load cars.");
       } finally {
         setLoading(false);
       }
@@ -52,154 +86,287 @@ export default function Cars() {
   }, []);
 
   const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedCars = cars.slice(startIndex, endIndex);
+  const paginatedCars = cars.slice(startIndex, startIndex + pageSize);
 
-  const handleContactOwner = () => {
-    if (viewModal.car && viewModal.car.contactNumber) {
-      setContactNumber(viewModal.car.contactNumber);
-    } else {
-      setContactNumber("Not available");
+  const openCarModal = async (car) => {
+    setViewModal({ visible: true, car });
+    setOwner(null);
+    setOwnerLoading(true);
+
+    try {
+      if (car.uid) {
+        const userRef = doc(db, "users", car.uid);
+        const userSnap = await getDoc(userRef);
+        setOwner(userSnap.exists() ? userSnap.data() : null);
+      } else {
+        setOwner(null);
+      }
+    } catch (e) {
+      console.error("Owner fetch failed:", e);
+      setOwner(null);
+    } finally {
+      setOwnerLoading(false);
     }
   };
 
-  const handleSendNegotiation = async (values) => {
-    if (!viewModal.car) return;
+  const formatPrice = (price) => {
+    return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
 
-    setNegotiationLoading(true);
-    try {
-      await addDoc(collection(db, "negotiations"), {
-        carId: viewModal.car.id,
-        proposedPrice: values.proposedPrice,
-        createdAt: new Date(),
-      });
-
-      form.resetFields();
-      alert("Proposed price sent to owner!");
-    } catch (err) {
-      console.error("Error sending negotiation:", err);
-      alert("Failed to send proposal.");
-    } finally {
-      setNegotiationLoading(false);
+  const getConditionColor = (condition) => {
+    switch (condition?.toLowerCase()) {
+      case "excellent":
+        return "green";
+      case "good":
+        return "blue";
+      case "fair":
+        return "orange";
+      case "damaged":
+        return "red";
+      default:
+        return "default";
     }
   };
 
   if (loading) {
     return (
-      <div className="dashboard-loading">
+       <div
+        style={{
+          minHeight: "70vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <Spin size="large" tip="Loading cars..." />
       </div>
     );
   }
 
   return (
-    <div className="dashboard-container">
-      <h1 className="dashboard-title">Cars on Sale</h1>
+    <div className="cars-container">
+      <div className="cars-header">
+        <h1 className="cars-main-title">Premium Cars Collection</h1>
+        <p className="cars-subtitle">Discover exceptional vehicles from trusted sellers</p>
+      </div>
 
-      <Row gutter={[16, 16]}>
-        {paginatedCars.length > 0 ? (
-          paginatedCars.map((car) => (
-            <Col xs={24} sm={12} md={8} lg={6} key={car.id}>
-              <Card
-                hoverable
-                cover={<img alt={car.title} src={car.imageUrl} className="car-image" />}
-                actions={[
-                  <EyeOutlined key="view" onClick={() => {
-                    setViewModal({ visible: true, car });
-                    setContactNumber("");
-                  }} />,
-                ]}
-              >
-                <Card.Meta
-                  title={car.title}
-                  description={
-                    <>
-                      <p><strong>Price:</strong> {car.price} PKR</p>
-                      <p><strong>City:</strong> {car.city}</p>
-                    </>
+      <div className="cars-content">
+        <Row gutter={[24, 24]}>
+          {paginatedCars.length > 0 ? (
+            paginatedCars.map((car) => (
+              <Col xs={24} sm={12} md={8} lg={6} key={car.id}>
+                <Card
+                  className="car-card"
+                  hoverable
+                  cover={
+                    <div className="car-image-container">
+                      <img
+                        alt={car.title || car.brand || "Car"}
+                        src={car.imageUrl || "/car-placeholder.jpg"}
+                        className="car-image"
+                      />
+                      <div className="car-overlay">
+                        <Button 
+                          type="primary" 
+                          shape="round" 
+                          icon={<EyeOutlined />}
+                          onClick={() => openCarModal(car)}
+                        >
+                          View Details
+                        </Button>
+                      </div>
+                      {car.condition && (
+                        <Tag color={getConditionColor(car.condition)} className="car-condition-tag">
+                          {car.condition}
+                        </Tag>
+                      )}
+                    </div>
                   }
-                />
-              </Card>
+                >
+                  <div className="car-card-content">
+                    <h3 className="car-title">{car.title || car.brand || "Car"}</h3>
+                    <div className="car-price">{formatPrice(car.price || 0)} PKR</div>
+                    <div className="car-details">
+                      <div className="car-detail-item">
+                        <CalendarOutlined /> {car.year || "N/A"}
+                      </div>
+                      <div className="car-detail-item">
+                        <DashboardOutlined /> {car.mileage ? `${car.mileage} km` : "N/A"}
+                      </div>
+                    </div>
+                    <div className="car-location">
+                      <EnvironmentOutlined /> {car.city || "Unknown"}
+                    </div>
+                  </div>
+                </Card>
+              </Col>
+            ))
+          ) : (
+            <Col span={24}>
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description="No cars available at the moment"
+              >
+                <Button type="primary">Check Back Later</Button>
+              </Empty>
             </Col>
-          ))
-        ) : (
-          <p className="no-data">No cars available.</p>
-        )}
-      </Row>
+          )}
+        </Row>
 
-      {cars.length > pageSize && (
-        <Pagination
-          current={currentPage}
-          pageSize={pageSize}
-          total={cars.length}
-          onChange={(page) => setCurrentPage(page)}
-          style={{ textAlign: "center", marginTop: 20 }}
-        />
-      )}
+        {cars.length > pageSize && (
+          <div className="cars-pagination">
+            <Pagination
+              current={currentPage}
+              pageSize={pageSize}
+              total={cars.length}
+              onChange={(p) => setCurrentPage(p)}
+              showSizeChanger={false}
+              showQuickJumper
+            />
+          </div>
+        )}
+      </div>
 
       <Modal
-        title={viewModal.car?.title}
+        className="car-details-modal"
+        title={
+          <div className="modal-title">
+            <CarOutlined />
+            <span>{viewModal.car?.title || viewModal.car?.brand || "Car Details"}</span>
+          </div>
+        }
         open={viewModal.visible}
         footer={null}
         onCancel={() => {
           setViewModal({ visible: false, car: null });
-          setContactNumber("");
+          setOwner(null);
         }}
+        width={800}
       >
         {viewModal.car && (
-          <>
-            <img
-              src={viewModal.car.imageUrl}
-              alt={viewModal.car.title}
-              style={{ width: "100%", marginBottom: "15px" }}
-            />
-            <p><strong>Price:</strong> {viewModal.car.price} PKR</p>
-            <p><strong>Transmission:</strong> {viewModal.car.transmission}</p>
-            <p><strong>Condition:</strong> {viewModal.car.condition}</p>
-            <p><strong>Engine Capacity:</strong> {viewModal.car.engineCapacity} cc</p>
-            <p><strong>Color:</strong> {viewModal.car.color}</p>
-            <p><strong>City:</strong> {viewModal.car.city}</p>
-            <p><strong>Description:</strong> {viewModal.car.description}</p>
+          <div className="car-modal-content">
+            <div className="car-modal-image-section">
+              <img
+                src={viewModal.car.imageUrl || "/car-placeholder.jpg"}
+                alt={viewModal.car.title || "Car"}
+                className="car-modal-image"
+              />
+              <div className="car-modal-badge">
+                <Tag color={getConditionColor(viewModal.car.condition)}>
+                  {viewModal.car.condition}
+                </Tag>
+                <div className="car-modal-price">
+                  <DollarOutlined /> {formatPrice(viewModal.car.price)} PKR
+                </div>
+              </div>
+            </div>
 
-            <Button
-              type="primary"
-              icon={<PhoneOutlined />}
-              block
-              style={{ marginTop: 15 }}
-              onClick={handleContactOwner}
-            >
-              Contact Owner
-            </Button>
+            <Divider className="modal-divider" />
 
-            {contactNumber && (
-              <p style={{ marginTop: 10, fontWeight: "bold" }}>
-                Owner Contact: {contactNumber}
-              </p>
+            <div className="car-specs-grid">
+              <div className="spec-item">
+                <div className="spec-icon"><CalendarOutlined /></div>
+                <div className="spec-content">
+                  <div className="spec-label">Year</div>
+                  <div className="spec-value">{viewModal.car.year || "N/A"}</div>
+                </div>
+              </div>
+              
+              <div className="spec-item">
+                <div className="spec-icon"><DashboardOutlined /></div>
+                <div className="spec-content">
+                  <div className="spec-label">Mileage</div>
+                  <div className="spec-value">{viewModal.car.mileage ? `${viewModal.car.mileage} km` : "N/A"}</div>
+                </div>
+              </div>
+              
+              <div className="spec-item">
+                <div className="spec-icon"><SafetyCertificateOutlined /></div>
+                <div className="spec-content">
+                  <div className="spec-label">Transmission</div>
+                  <div className="spec-value">{viewModal.car.transmission || "N/A"}</div>
+                </div>
+              </div>
+              
+              <div className="spec-item">
+                <div className="spec-icon"><CarOutlined /></div>
+                <div className="spec-content">
+                  <div className="spec-label">Engine Capacity</div>
+                  <div className="spec-value">{viewModal.car.engineCapacity ? `${viewModal.car.engineCapacity} cc` : "N/A"}</div>
+                </div>
+              </div>
+              
+              <div className="spec-item">
+                <div className="spec-icon"><EnvironmentOutlined /></div>
+                <div className="spec-content">
+                  <div className="spec-label">City</div>
+                  <div className="spec-value">{viewModal.car.city || "N/A"}</div>
+                </div>
+              </div>
+              
+              <div className="spec-item">
+                <div className="spec-icon">🎨</div>
+                <div className="spec-content">
+                  <div className="spec-label">Color</div>
+                  <div className="spec-value">{viewModal.car.color || "N/A"}</div>
+                </div>
+              </div>
+            </div>
+
+            {viewModal.car.description && (
+              <>
+                <Divider className="modal-divider" />
+                <div className="car-description">
+                  <h4>Description</h4>
+                  <p>{viewModal.car.description}</p>
+                </div>
+              </>
             )}
 
-            <Divider />
+            <Divider className="modal-divider" />
 
-            <Form form={form} onFinish={handleSendNegotiation} layout="vertical">
-              <Form.Item
-                name="proposedPrice"
-                label="Propose a Price"
-                rules={[{ required: true, message: "Please enter your proposed price" }]}
-              >
-                <Input type="number" placeholder="Enter amount in PKR" />
-              </Form.Item>
-
-              <Form.Item>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  block
-                  loading={negotiationLoading}
-                >
-                  Send Proposal
-                </Button>
-              </Form.Item>
-            </Form>
-          </>
+            <div className="owner-section">
+              <h4>
+                <UserOutlined /> Owner Information
+              </h4>
+              
+              {ownerLoading ? (
+                <div className="owner-loading">
+                  <Skeleton avatar active paragraph={{ rows: 2 }} />
+                </div>
+              ) : (
+                <div className="owner-details">
+                  <div className="owner-avatar">
+                    <Avatar size={64} icon={<UserOutlined />} src={owner?.photoURL} />
+                    <div className="owner-info">
+                      <div className="owner-name">{owner?.fullName || "Not available"}</div>
+                      <div className="owner-verification">Verified Seller</div>
+                    </div>
+                  </div>
+                  
+                  <div className="owner-contact">
+                    {owner?.phone && (
+                      <div className="contact-item">
+                        <PhoneOutlined />
+                        <span>{owner.phone}</span>
+                      </div>
+                    )}
+                    
+                    {owner?.email && (
+                      <div className="contact-item">
+                        <MailOutlined />
+                        <span>{owner.email}</span>
+                      </div>
+                    )}
+                    
+                    {(!owner?.phone && !owner?.email) && (
+                      <div className="no-contact">Contact information not available</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </Modal>
     </div>

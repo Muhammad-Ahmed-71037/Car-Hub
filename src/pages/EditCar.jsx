@@ -5,14 +5,16 @@ import { supabase } from "../supabase/supabase";
 import { db } from "../firebase/firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { Form, Input, InputNumber, Select, Button, Upload, Card, Spin } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
+import { PlusOutlined, UploadOutlined } from "@ant-design/icons";
 import Swal from "sweetalert2";
 import "../styles/Sell.css";
+import { useSelector } from "react-redux";
 
 
 export default function EditCar() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const uid = useSelector((state) => state.auth.user?.uid);
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [file, setFile] = useState(null);
@@ -99,7 +101,7 @@ export default function EditCar() {
       if (file) {
         const fileExt = file.name.split(".").pop();
         const safeTitle = values.title.replace(/[^a-zA-Z0-9]/g, "_");
-        filePath = `${id}/${Date.now()}-${safeTitle}.${fileExt}`;
+        filePath = `${uid}/${Date.now()}-${safeTitle}.${fileExt}`;
 
         const { error: uploadError } = await supabase
           .storage
@@ -128,8 +130,15 @@ export default function EditCar() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Spin size="large" />
+       <div
+        style={{
+          minHeight: "70vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Spin size="large" tip="Loading cars..." />
       </div>
     );
   }
